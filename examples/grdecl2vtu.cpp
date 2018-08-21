@@ -23,6 +23,8 @@
 #endif
 
 #include <iostream>
+#include <vector>
+
 
 // Warning suppression for Dune includes.
 #include <opm/grid/utility/platform_dependent/disable_warnings.h>
@@ -51,8 +53,10 @@ using namespace Dune;
  */
 
 /**
-   A function to (conditionally) write a double-field from the grdecl-file to vtk-format
+   A function to (conditionally) write a value from the grdecl-file to vtk-format
 */
+
+              
 template <class OpmDeck>
 void condWriteDoubleField(std::vector<double>& fieldvector,
                           const std::string& fieldname,
@@ -63,14 +67,14 @@ void condWriteDoubleField(std::vector<double>& fieldvector,
     if (deck.hasKeyword(fieldname)) {
         std::cout << "Found " << fieldname << "..." << std::endl;
         std::vector<double> eclVector = deck.getKeyword(fieldname).getRawDoubleData();
-        fieldvector.resize(global_cell.size());
+     
         int num_global_cells = dims[0]*dims[1]*dims[2];
         if (int(eclVector.size()) != num_global_cells) {
             OPM_THROW(std::runtime_error, fieldname << " field must have the same size as the "
                   "logical cartesian size of the grid: "
                   << eclVector.size() << " != " << num_global_cells);
         }
-
+        fieldvector.resize(global_cell.size());
         for (size_t i = 0; i < global_cell.size(); ++i) {
             fieldvector[i] = eclVector[global_cell[i]];
         }
@@ -79,9 +83,10 @@ void condWriteDoubleField(std::vector<double>& fieldvector,
 
 }
 
+
 // Now repeat for Integers. I should learn C++ templating...
 template <class OpmDeck>
-void condWriteIntegerField(std::vector<double>& fieldvector,
+void condWriteIntegerField(std::vector<int>& fieldvector,
                            const std::string& fieldname,
                            const OpmDeck& deck,
                            const std::vector<int>& global_cell,
@@ -90,20 +95,20 @@ void condWriteIntegerField(std::vector<double>& fieldvector,
     if (deck.hasKeyword(fieldname)) {
         std::cout << "Found " << fieldname << "..." << std::endl;
         std::vector<int> eclVector = deck.getKeyword(fieldname).getIntData();
-        fieldvector.resize(global_cell.size());
+     
         int num_global_cells = dims[0]*dims[1]*dims[2];
         if (int(eclVector.size()) != num_global_cells) {
             OPM_THROW(std::runtime_error, fieldname << " field must have the same size as the "
                   "logical cartesian size of the grid: "
                   << eclVector.size() << " != " << num_global_cells);
         }
-
+ 
+        fieldvector.resize(global_cell.size());
         for (size_t i = 0; i < global_cell.size(); ++i) {
-            fieldvector[i] = (double)eclVector[global_cell[i]];
+            fieldvector[i] = eclVector[global_cell[i]]; 
         }
-        vtkwriter.addCellData(fieldvector, fieldname);
+        vtkwriter.addCellData(fieldvector, fieldname); 
     }
-
 }
 
 
@@ -152,29 +157,32 @@ try
 
 #if HAVE_OPM_PARSER
     const std::vector<int>& global_cell = grid.globalCell();
-
+    
     std::vector<double> poros;
     condWriteDoubleField(poros, "PORO", deck, global_cell, dims, vtkwriter);
 
     std::vector<double> permxs;
     condWriteDoubleField(permxs, "PERMX", deck, global_cell, dims, vtkwriter);
+    
     std::vector<double> permys;
     condWriteDoubleField(permys, "PERMY", deck, global_cell, dims, vtkwriter);
 
     std::vector<double> permzs;
     condWriteDoubleField(permzs, "PERMZ", deck, global_cell, dims, vtkwriter);
 
-    std::vector<double> actnums;
+    std::vector<int> actnums; //expected data for ACTNUM are ints
     condWriteIntegerField(actnums, "ACTNUM", deck, global_cell, dims, vtkwriter);
 
-    std::vector<double> satnums;
+    std::vector<int> satnums;
     condWriteIntegerField(satnums, "SATNUM", deck, global_cell, dims, vtkwriter);
 
-    std::vector<double> regnums;
+    std::vector<int> regnums;
     condWriteIntegerField(regnums, "REGNUM", deck, global_cell, dims, vtkwriter);
 
     std::vector<double> swats;
     condWriteDoubleField(swats, "SWAT", deck, global_cell, dims, vtkwriter);
+   
+
 #endif // #if HAVE_OPM_PARSER
 
     std::string fname(eclipsefilename);
@@ -186,4 +194,3 @@ catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
     throw;
 }
-
